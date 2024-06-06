@@ -17,9 +17,11 @@
 
 1、添加/models/subNets/PLE.py代码
 PLElayer通过控制num_gates参数可以实现两个门控输出或者三个门控输出（低层特征提取）
+
 2、修改self_mm模型代码，位于/models/multiTask/SELF_MM.py
 ![alt text](image.png)
 每个模态由两层PLE层组成，第一层输出3个门控值，第二层输出2个任务相关值。
+
 3、修改self_mm训练代码，位于/trains/multiTask/SELF_MM.py
 修改比较少，只是在原来loss上加了一个L1loss
 
