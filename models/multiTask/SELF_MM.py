@@ -72,22 +72,22 @@ class SELF_MM(nn.Module):
         self.e_post_fusion_layer_3 = nn.Linear(args.post_fusion_dim, 6)
 
         # the classify layer for text
-        self.post_text_dropout = nn.Dropout(p=args.post_text_dropout)
-        self.post_text_layer_1 = nn.Linear(args.text_out, args.post_text_dim)
-        self.post_text_layer_2 = nn.Linear(args.post_text_dim, args.post_text_dim)
-        self.post_text_layer_3 = nn.Linear(args.post_text_dim, 1)
+        # self.post_text_dropout = nn.Dropout(p=args.post_text_dropout)
+        # self.post_text_layer_1 = nn.Linear(args.text_out, args.post_text_dim)
+        # self.post_text_layer_2 = nn.Linear(args.post_text_dim, args.post_text_dim)
+        # self.post_text_layer_3 = nn.Linear(args.post_text_dim, 1)
 
-        # the classify layer for audio
-        self.post_audio_dropout = nn.Dropout(p=args.post_audio_dropout)
-        self.post_audio_layer_1 = nn.Linear(args.audio_out, args.post_audio_dim)
-        self.post_audio_layer_2 = nn.Linear(args.post_audio_dim, args.post_audio_dim)
-        self.post_audio_layer_3 = nn.Linear(args.post_audio_dim, 1)
+        # # the classify layer for audio
+        # self.post_audio_dropout = nn.Dropout(p=args.post_audio_dropout)
+        # self.post_audio_layer_1 = nn.Linear(args.audio_out, args.post_audio_dim)
+        # self.post_audio_layer_2 = nn.Linear(args.post_audio_dim, args.post_audio_dim)
+        # self.post_audio_layer_3 = nn.Linear(args.post_audio_dim, 1)
 
-        # the classify layer for video
-        self.post_video_dropout = nn.Dropout(p=args.post_video_dropout)
-        self.post_video_layer_1 = nn.Linear(args.video_out, args.post_video_dim)
-        self.post_video_layer_2 = nn.Linear(args.post_video_dim, args.post_video_dim)
-        self.post_video_layer_3 = nn.Linear(args.post_video_dim, 1)
+        # # the classify layer for video
+        # self.post_video_dropout = nn.Dropout(p=args.post_video_dropout)
+        # self.post_video_layer_1 = nn.Linear(args.video_out, args.post_video_dim)
+        # self.post_video_layer_2 = nn.Linear(args.post_video_dim, args.post_video_dim)
+        # self.post_video_layer_3 = nn.Linear(args.post_video_dim, 1)
 
     def forward(self, text, audio, video):
         audio, audio_lengths = audio
@@ -128,30 +128,30 @@ class SELF_MM(nn.Module):
         fusion_h = self.post_fusion_dropout(fusion_h)
         fusion_h = F.relu(self.post_fusion_layer_1(fusion_h), inplace=False)
         # # text
-        text_h = self.post_text_dropout(text_task1)
-        text_h = F.relu(self.post_text_layer_1(text_h), inplace=False)
-        # audio
-        audio_h = self.post_audio_dropout(audio_task1)
-        audio_h = F.relu(self.post_audio_layer_1(audio_h), inplace=False)
-        # vision
-        video_h = self.post_video_dropout(video_task1)
-        video_h = F.relu(self.post_video_layer_1(video_h), inplace=False)
+        # text_h = self.post_text_dropout(text_task1)
+        # text_h = F.relu(self.post_text_layer_1(text_h), inplace=False)
+        # # audio
+        # audio_h = self.post_audio_dropout(audio_task1)
+        # audio_h = F.relu(self.post_audio_layer_1(audio_h), inplace=False)
+        # # vision
+        # video_h = self.post_video_dropout(video_task1)
+        # video_h = F.relu(self.post_video_layer_1(video_h), inplace=False)
 
         # classifier-fusion
         x_f = F.relu(self.post_fusion_layer_2(fusion_h), inplace=False)
         output_fusion = self.post_fusion_layer_3(x_f)
 
         # classifier-text
-        x_t = F.relu(self.post_text_layer_2(text_h), inplace=False)
-        output_text = self.post_text_layer_3(x_t)
+        # x_t = F.relu(self.post_text_layer_2(text_h), inplace=False)
+        # output_text = self.post_text_layer_3(x_t)
 
-        # classifier-audio
-        x_a = F.relu(self.post_audio_layer_2(audio_h), inplace=False)
-        output_audio = self.post_audio_layer_3(x_a)
+        # # classifier-audio
+        # x_a = F.relu(self.post_audio_layer_2(audio_h), inplace=False)
+        # output_audio = self.post_audio_layer_3(x_a)
 
-        # classifier-vision
-        x_v = F.relu(self.post_video_layer_2(video_h), inplace=False)
-        output_video = self.post_video_layer_3(x_v)
+        # # classifier-vision
+        # x_v = F.relu(self.post_video_layer_2(video_h), inplace=False)
+        # output_video = self.post_video_layer_3(x_v)
 
         # =====================task2=====================
         e_fusion_h = torch.cat([text_task2, audio_task2, video_task2], dim=-1)
@@ -161,16 +161,27 @@ class SELF_MM(nn.Module):
         e_x_f = F.relu(self.e_post_fusion_layer_2(e_fusion_h), inplace=False)
         e_output_fusion = self.e_post_fusion_layer_3(e_x_f)
 
+        # res = {
+        #     'M': output_fusion, 
+        #     'M_E': e_output_fusion,
+        #     'T': output_text,
+        #     'A': output_audio,
+        #     'V': output_video,
+        #     'Feature_t': text_h,
+        #     'Feature_a': audio_h,
+        #     'Feature_v': video_h,
+        #     'Feature_f': fusion_h,
+        # }
         res = {
             'M': output_fusion, 
             'M_E': e_output_fusion,
-            'T': output_text,
-            'A': output_audio,
-            'V': output_video,
-            'Feature_t': text_h,
-            'Feature_a': audio_h,
-            'Feature_v': video_h,
-            'Feature_f': fusion_h,
+            # 'T': output_text,
+            # 'A': output_audio,
+            # 'V': output_video,
+            # 'Feature_t': text_h,
+            # 'Feature_a': audio_h,
+            # 'Feature_v': video_h,
+            # 'Feature_f': fusion_h,
         }
         return res
 

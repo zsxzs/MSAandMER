@@ -18,7 +18,9 @@ class SELF_MM():
         assert args.train_mode == 'regression'
 
         self.args = args
-        self.args.tasks = "MTAV"
+        # self.args.tasks = "MTAV"
+        self.args.tasks = "M"
+
         self.metrics = MetricsTop(args.train_mode).getMetics(args.dataset_name)
 
         self.feature_map = {
@@ -136,6 +138,7 @@ class SELF_MM():
                     text = batch_data['text'].to(self.args.device)
                     indexes = batch_data['index'].view(-1)
                     cur_id = batch_data['id']
+                    labels_m = batch_data['labels']['M'].to(self.args.device)
                     labels_em = batch_data['labels']['M_E'].to(self.args.device)
                     ids.extend(cur_id)
 
@@ -158,9 +161,11 @@ class SELF_MM():
 
                     # compute loss
                     loss = 0.0
-                    for m in self.args.tasks:
-                        loss += self.weighted_loss(outputs[m], self.label_map[self.name_map[m]][indexes], \
-                                                    indexes=indexes, mode=self.name_map[m])
+                    loss += F.l1_loss(outputs['M'], labels_m)
+
+                    # for m in self.args.tasks:
+                    #     loss += self.weighted_loss(outputs[m], self.label_map[self.name_map[m]][indexes], \
+                    #                                 indexes=indexes, mode=self.name_map[m])
                         
                     # add emotion loss
                     # loss += self.weighted_loss(outputs['M_E'], self.label_map[self.name_map['M_E']][indexes], 
@@ -171,15 +176,15 @@ class SELF_MM():
                     loss.backward()
                     train_loss += loss.item()
                     # update features
-                    f_fusion = outputs['Feature_f'].detach()
-                    f_text = outputs['Feature_t'].detach()
-                    f_audio = outputs['Feature_a'].detach()
-                    f_vision = outputs['Feature_v'].detach()
-                    if epochs > 1:
-                        self.update_labels(f_fusion, f_text, f_audio, f_vision, epochs, indexes, outputs)
+                    # f_fusion = outputs['Feature_f'].detach()
+                    # f_text = outputs['Feature_t'].detach()
+                    # f_audio = outputs['Feature_a'].detach()
+                    # f_vision = outputs['Feature_v'].detach()
+                    # if epochs > 1:
+                    #     self.update_labels(f_fusion, f_text, f_audio, f_vision, epochs, indexes, outputs)
 
-                    self.update_features(f_fusion, f_text, f_audio, f_vision, indexes)
-                    self.update_centers()
+                    # self.update_features(f_fusion, f_text, f_audio, f_vision, indexes)
+                    # self.update_centers()
                     
                     # update parameters
                     if not left_epochs:
