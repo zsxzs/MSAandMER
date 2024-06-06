@@ -1,5 +1,6 @@
 # 数据
 
+
 使用的是MMSA（https://github.com/thuiar/MMSA）中处理好的特征。
 数据链接：https://pan.baidu.com/s/10mzWQfVUsFhWP5j6oU9AuQ?pwd=1234 
 提取码：1234 
@@ -29,3 +30,8 @@ PLElayer通过控制num_gates参数可以实现两个门控输出或者三个门
 问题：
 模型的输出没有检查出问题，但是训练的指数corr为负的？
 ![alt text](image-1.png)
+
+去掉ple后，可以正常训练
+![alt text](image-2.png)
+加上ple后，训练不通
+![alt text](image-3.png)

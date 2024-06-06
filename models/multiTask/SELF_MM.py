@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from ..subNets import BertTextEncoder
-from ..subNets import PLElayer
+from ..subNets import Expert, PLElayer, PLE
 
 __all__ = ['SELF_MM']
 
@@ -29,22 +29,34 @@ class SELF_MM(nn.Module):
                             num_layers=args.v_lstm_layers, dropout=args.v_lstm_dropout)
 
         # PLE for text
-        self.t_ple1 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.text_out, args.text_out, num_gates=3)
-        self.t_ple2 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.text_out, args.text_out, num_gates=2)
+        self.t_ple = PLE(args.text_out, args.num_specific_experts, args.num_shared_experts, 
+                         args.text_out, args.text_out)
+        # self.t_e1 = Expert(args.text_out, args.text_out, args.text_out)
+        # self.t_e2 = Expert(args.text_out, args.text_out, args.text_out)
+        # self.t_ple1 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.text_out, args.text_out, num_gates=3)
+        # self.t_ple2 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.text_out, args.text_out, num_gates=2)
 
-        # PLE for audio
-        self.a_ple1 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.audio_out, args.audio_out, num_gates=3)
-        self.a_ple2 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.audio_out, args.audio_out, num_gates=2)
+        # # PLE for audio
+        self.a_ple = PLE(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
+                         args.audio_out, args.audio_out)
+        # self.a_e1 = Expert(args.audio_out, args.audio_out, args.audio_out)
+        # self.a_e2 = Expert(args.audio_out, args.audio_out, args.audio_out)
+        # self.a_ple1 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.audio_out, args.audio_out, num_gates=3)
+        # self.a_ple2 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.audio_out, args.audio_out, num_gates=2)
 
-        # PLE for video
-        self.v_ple1 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.video_out, args.text_out, num_gates=3)
-        self.v_ple2 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
-                               args.video_out, args.text_out, num_gates=2)
+        # # PLE for video
+        self.v_ple = PLE(args.video_out, args.num_specific_experts, args.num_shared_experts, 
+                         args.video_out, args.video_out)
+        # self.v_e1 = Expert(args.video_out, args.video_out, args.video_out)
+        # self.v_e2 = Expert(args.video_out, args.video_out, args.video_out)
+        # self.v_ple1 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.video_out, args.text_out, num_gates=3)
+        # self.v_ple2 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
+        #                        args.video_out, args.text_out, num_gates=2)
 
         # the post_fusion layers 
         # sentiment analysis
@@ -92,15 +104,23 @@ class SELF_MM(nn.Module):
             audio = self.audio_model(audio, audio_lengths)
             video = self.video_model(video, video_lengths)
 
-        # ple text
-        text_task1, text_shared, text_task2 = self.t_ple1(text, text, text)
-        text_task1, text_task2 = self.t_ple2(text_task1, text_shared, text_task2)
-        # ple audio
-        audio_task1, audio_shared, audio_task2 = self.a_ple1(audio, audio, audio)
-        audio_task1, audio_task2 = self.a_ple2(audio_task1, audio_shared, audio_task2)
-        # ple video
-        video_task1, video_shared, video_task2 = self.v_ple1(video, video, video)
-        video_task1, video_task2 = self.v_ple2(video_task1, video_shared, video_task2)
+        # # ple text
+        # text_task1, text_shared, text_task2 = self.t_ple1(text, text, text)
+        # text_task1, text_task2 = self.t_ple2(text_task1, text_shared, text_task2)
+        # # ple audio
+        # audio_task1, audio_shared, audio_task2 = self.a_ple1(audio, audio, audio)
+        # audio_task1, audio_task2 = self.a_ple2(audio_task1, audio_shared, audio_task2)
+        # # ple video
+        # video_task1, video_shared, video_task2 = self.v_ple1(video, video, video)
+        # video_task1, video_task2 = self.v_ple2(video_task1, video_shared, video_task2)
+
+        # text = self.t_e2(self.t_e1(text))
+        # audio = self.a_e2(self.a_e1(audio))
+        # video = self.v_e2(self.v_e1(video)) 
+
+        text_task1, text_task2 = self.t_ple(text)
+        audio_task1, audio_task2 = self.a_ple(audio)
+        video_task1, video_task2 = self.v_ple(video)
         
         # =====================task1=====================
         # fusion

@@ -5,6 +5,7 @@ import pickle as plk
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from tqdm import tqdm
 
@@ -69,7 +70,7 @@ class SELF_MM():
         }
         # 'M_E': 'fusion_emotion',
 
-        self.criterion = nn.L1Loss()
+        # self.criterion = nn.L1Loss()
 
     def do_train(self, model, dataloader, return_epoch_results=False):
         bert_no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
@@ -164,7 +165,7 @@ class SELF_MM():
                     # add emotion loss
                     # loss += self.weighted_loss(outputs['M_E'], self.label_map[self.name_map['M_E']][indexes], 
                     #                            indexes=indexes, mode='fusion')
-                    loss += self.criterion(outputs['M_E'], labels_em)
+                    loss += F.l1_loss(outputs['M_E'], labels_em)
 
                     # backward
                     loss.backward()
