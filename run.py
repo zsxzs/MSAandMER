@@ -244,7 +244,7 @@ def _run(args, num_workers=4, is_tune=False, from_sena=False):
     # load data and models
     dataloader = MMDataLoader(args, num_workers)
     model = AMIO(args).to(args['device'])
-    print(model)
+    # print(model)
 
     logger.info(f'The model has {count_parameters(model)} trainable parameters')
     # TODO: use multiple gpus

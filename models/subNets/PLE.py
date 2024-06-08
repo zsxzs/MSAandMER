@@ -3,18 +3,21 @@ import torch.nn as nn
 import numpy as np
 
 class Expert(nn.Module):
-    def __init__(self, input_size, output_size, hidden_size):
+    def __init__(self, input_size, output_size, hidden_size, p=0.1):
         super(Expert, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, output_size)
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.3)
+
+        self.dnn_layer = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(p),
+            nn.Linear(hidden_size, output_size),
+            nn.ReLU(),
+            nn.Dropout(p)
+        )
+        
 
     def forward(self, x):
-        out = self.fc1(x)
-        out = self.relu(out)
-        out = self.dropout(out)
-        out = self.fc2(out)
+        out = self.dnn_layer(x)
         return out
     
 class PLElayer(nn.Module):

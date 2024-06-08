@@ -12,6 +12,7 @@ from tqdm import tqdm
 from utils import MetricsTop, dict_to_str
 
 logger = logging.getLogger('MMSA')
+emotions = ['happiness', 'sadness', 'anger', 'surprise', 'disgust', 'fear']
 
 class SELF_MM():
     def __init__(self, args):
@@ -23,56 +24,56 @@ class SELF_MM():
 
         self.metrics = MetricsTop(args.train_mode).getMetics(args.dataset_name)
 
-        self.feature_map = {
-            'fusion': torch.zeros(args.train_samples, args.post_fusion_dim, requires_grad=False).to(args.device),
-            'text': torch.zeros(args.train_samples, args.post_text_dim, requires_grad=False).to(args.device),
-            'audio': torch.zeros(args.train_samples, args.post_audio_dim, requires_grad=False).to(args.device),
-            'vision': torch.zeros(args.train_samples, args.post_video_dim, requires_grad=False).to(args.device),
-        }
+        # self.feature_map = {
+        #     'fusion': torch.zeros(args.train_samples, args.post_fusion_dim, requires_grad=False).to(args.device),
+        #     'text': torch.zeros(args.train_samples, args.post_text_dim, requires_grad=False).to(args.device),
+        #     'audio': torch.zeros(args.train_samples, args.post_audio_dim, requires_grad=False).to(args.device),
+        #     'vision': torch.zeros(args.train_samples, args.post_video_dim, requires_grad=False).to(args.device),
+        # }
 
-        self.center_map = {
-            'fusion': {
-                'pos': torch.zeros(args.post_fusion_dim, requires_grad=False).to(args.device),
-                'neg': torch.zeros(args.post_fusion_dim, requires_grad=False).to(args.device),
-            },
-            'text': {
-                'pos': torch.zeros(args.post_text_dim, requires_grad=False).to(args.device),
-                'neg': torch.zeros(args.post_text_dim, requires_grad=False).to(args.device),
-            },
-            'audio': {
-                'pos': torch.zeros(args.post_audio_dim, requires_grad=False).to(args.device),
-                'neg': torch.zeros(args.post_audio_dim, requires_grad=False).to(args.device),
-            },
-            'vision': {
-                'pos': torch.zeros(args.post_video_dim, requires_grad=False).to(args.device),
-                'neg': torch.zeros(args.post_video_dim, requires_grad=False).to(args.device),
-            }
-        }
+        # self.center_map = {
+        #     'fusion': {
+        #         'pos': torch.zeros(args.post_fusion_dim, requires_grad=False).to(args.device),
+        #         'neg': torch.zeros(args.post_fusion_dim, requires_grad=False).to(args.device),
+        #     },
+        #     'text': {
+        #         'pos': torch.zeros(args.post_text_dim, requires_grad=False).to(args.device),
+        #         'neg': torch.zeros(args.post_text_dim, requires_grad=False).to(args.device),
+        #     },
+        #     'audio': {
+        #         'pos': torch.zeros(args.post_audio_dim, requires_grad=False).to(args.device),
+        #         'neg': torch.zeros(args.post_audio_dim, requires_grad=False).to(args.device),
+        #     },
+        #     'vision': {
+        #         'pos': torch.zeros(args.post_video_dim, requires_grad=False).to(args.device),
+        #         'neg': torch.zeros(args.post_video_dim, requires_grad=False).to(args.device),
+        #     }
+        # }
 
-        self.dim_map = {
-            'fusion': torch.tensor(args.post_fusion_dim).float(),
-            'text': torch.tensor(args.post_text_dim).float(),
-            'audio': torch.tensor(args.post_audio_dim).float(),
-            'vision': torch.tensor(args.post_video_dim).float(),
-        }
-        # new labels
-        self.label_map = {
-            'fusion': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
-            'text': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
-            'audio': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
-            'vision': torch.zeros(args.train_samples, requires_grad=False).to(args.device)
-        }
-        # 'fusion_emotion': torch.zeros([args.train_samples, 6], requires_grad=False).to(args.device),
+        # self.dim_map = {
+        #     'fusion': torch.tensor(args.post_fusion_dim).float(),
+        #     'text': torch.tensor(args.post_text_dim).float(),
+        #     'audio': torch.tensor(args.post_audio_dim).float(),
+        #     'vision': torch.tensor(args.post_video_dim).float(),
+        # }
+        # # new labels
+        # self.label_map = {
+        #     'fusion': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
+        #     'text': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
+        #     'audio': torch.zeros(args.train_samples, requires_grad=False).to(args.device),
+        #     'vision': torch.zeros(args.train_samples, requires_grad=False).to(args.device)
+        # }
+        # # 'fusion_emotion': torch.zeros([args.train_samples, 6], requires_grad=False).to(args.device),
 
-        self.name_map = {
-            'M': 'fusion',
-            'T': 'text',
-            'A': 'audio',
-            'V': 'vision'
-        }
-        # 'M_E': 'fusion_emotion',
+        # self.name_map = {
+        #     'M': 'fusion',
+        #     'T': 'text',
+        #     'A': 'audio',
+        #     'V': 'vision'
+        # }
+        # # 'M_E': 'fusion_emotion',
 
-        # self.criterion = nn.L1Loss()
+        # # self.criterion = nn.L1Loss()
 
     def do_train(self, model, dataloader, return_epoch_results=False):
         bert_no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
@@ -98,12 +99,12 @@ class SELF_MM():
 
         saved_labels = {}
         # init labels
-        logger.info("Init labels...")
-        with tqdm(dataloader['train']) as td:
-            for batch_data in td:
-                labels_m = batch_data['labels']['M'].view(-1).to(self.args.device)
-                indexes = batch_data['index'].view(-1)
-                self.init_labels(indexes, labels_m)
+        # logger.info("Init labels...")
+        # with tqdm(dataloader['train']) as td:
+        #     for batch_data in td:
+        #         labels_m = batch_data['labels']['M'].view(-1).to(self.args.device)
+        #         indexes = batch_data['index'].view(-1)
+        #         self.init_labels(indexes, labels_m)
 
         # initilize results
         logger.info("Start training...")
@@ -120,11 +121,15 @@ class SELF_MM():
         while True: 
             epochs += 1
             # train
-            y_pred = {'M': [], 'M_E': [], 'T': [], 'A': [], 'V': []}
-            y_true = {'M': [], 'M_E': [], 'T': [], 'A': [], 'V': []}
+            # y_pred = {'M': [], 'M_E': [], 'T': [], 'A': [], 'V': []}
+            # y_true = {'M': [], 'M_E': [], 'T': [], 'A': [], 'V': []}
+            y_pred = {'M': [], 'M_E': []}
+            y_true = {'M': [], 'M_E': []}
             losses = []
             model.train()
             train_loss = 0.0
+            train_msa_loss = 0.0
+            train_mer_loss = 0.0
             left_epochs = self.args.update_epochs
             ids = []
             with tqdm(dataloader['train']) as td:
@@ -136,7 +141,7 @@ class SELF_MM():
                     vision = batch_data['vision'].to(self.args.device)
                     audio = batch_data['audio'].to(self.args.device)
                     text = batch_data['text'].to(self.args.device)
-                    indexes = batch_data['index'].view(-1)
+                    # indexes = batch_data['index'].view(-1)
                     cur_id = batch_data['id']
                     labels_m = batch_data['labels']['M'].to(self.args.device)
                     labels_em = batch_data['labels']['M_E'].to(self.args.device)
@@ -151,30 +156,39 @@ class SELF_MM():
                     # forward
                     outputs = model(text, (audio, audio_lengths), (vision, vision_lengths))
                     # store results
-                    for m in self.args.tasks:
-                        y_pred[m].append(outputs[m].cpu())
-                        y_true[m].append(self.label_map[self.name_map[m]][indexes].cpu())
-                    
-                    # add multi-emotion results
-                    # y_pred['M_E'].append(outputs['M_E'].cpu())
-                    # y_true['M_E'].append(self.label_map[self.name_map['M_E']][indexes].cpu())
+                    y_pred['M'].append(outputs['M'].detach().cpu())
+                    y_true['M'].append(labels_m.cpu())
+
+                    y_pred['M_E'].append(outputs['M_E'].detach().cpu())
+                    y_true['M_E'].append(labels_em.cpu())
+
+                    # for m in self.args.tasks:
+                    #     y_pred[m].append(outputs[m].cpu())
+                    #     y_true[m].append(self.label_map[self.name_map[m]][indexes].cpu())
+                    # # add multi-emotion results
+                    # # y_pred['M_E'].append(outputs['M_E'].cpu())
+                    # # y_true['M_E'].append(self.label_map[self.name_map['M_E']][indexes].cpu())
 
                     # compute loss
                     loss = 0.0
-                    loss += F.l1_loss(outputs['M'], labels_m)
-
                     # for m in self.args.tasks:
                     #     loss += self.weighted_loss(outputs[m], self.label_map[self.name_map[m]][indexes], \
                     #                                 indexes=indexes, mode=self.name_map[m])
                         
-                    # add emotion loss
-                    # loss += self.weighted_loss(outputs['M_E'], self.label_map[self.name_map['M_E']][indexes], 
-                    #                            indexes=indexes, mode='fusion')
-                    loss += F.l1_loss(outputs['M_E'], labels_em)
+                    # # add emotion loss
+                    # # loss += self.weighted_loss(outputs['M_E'], self.label_map[self.name_map['M_E']][indexes], 
+                    # #                            indexes=indexes, mode='fusion')
+                    msa_loss = F.l1_loss(outputs['M'], labels_m)
+                    loss += msa_loss
+                    mer_loss = F.l1_loss(outputs['M_E'], labels_em)
+                    loss += mer_loss * 5
 
                     # backward
                     loss.backward()
                     train_loss += loss.item()
+                    train_msa_loss += msa_loss.item()
+                    train_mer_loss += mer_loss.item()
+
                     # update features
                     # f_fusion = outputs['Feature_f'].detach()
                     # f_text = outputs['Feature_t'].detach()
@@ -195,11 +209,24 @@ class SELF_MM():
                     # update
                     optimizer.step()
             train_loss = train_loss / len(dataloader['train'])
+            train_msa_loss = train_msa_loss / len(dataloader['train'])
+            train_mer_loss = train_mer_loss / len(dataloader['train'])
             
-            for m in self.args.tasks:
-                pred, true = torch.cat(y_pred[m]), torch.cat(y_true[m])
-                train_results = self.metrics(pred, true)
-                logger.info('%s: >> ' %(m) + dict_to_str(train_results))
+            # for m in self.args.tasks:
+            #     pred, true = torch.cat(y_pred[m]), torch.cat(y_true[m])
+            #     train_results = self.metrics(pred, true)
+            #     logger.info('%s: >> ' %(m) + dict_to_str(train_results))
+
+            # task1
+            pred, true = torch.cat(y_pred['M']), torch.cat(y_true['M'])
+            train_results = self.metrics(pred, true)
+            logger.info('%s: >> ' %('MSA (M)') + dict_to_str(train_results))
+
+            pred, true = torch.cat(y_pred['M_E']), torch.cat(y_true['M_E'])
+            for i, emotion in enumerate(emotions):
+                train_results = self.metrics(pred[:, i], true[:, i])
+                logger.info('%s: >> ' %('MER (' + emotion + ')') + dict_to_str(train_results))
+
             # validation
             val_results = self.do_test(model, dataloader['valid'], mode="VAL")
             cur_valid = val_results[self.args.KeyEval]

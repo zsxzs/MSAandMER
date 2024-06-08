@@ -31,33 +31,15 @@ class SELF_MM(nn.Module):
         # PLE for text
         self.t_ple = PLE(args.text_out, args.num_specific_experts, args.num_shared_experts, 
                          args.text_out, args.text_out)
-        # self.t_e1 = Expert(args.text_out, args.text_out, args.text_out)
-        # self.t_e2 = Expert(args.text_out, args.text_out, args.text_out)
-        # self.t_ple1 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.text_out, args.text_out, num_gates=3)
-        # self.t_ple2 = PLElayer(args.text_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.text_out, args.text_out, num_gates=2)
 
         # # PLE for audio
         self.a_ple = PLE(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
                          args.audio_out, args.audio_out)
-        # self.a_e1 = Expert(args.audio_out, args.audio_out, args.audio_out)
-        # self.a_e2 = Expert(args.audio_out, args.audio_out, args.audio_out)
-        # self.a_ple1 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.audio_out, args.audio_out, num_gates=3)
-        # self.a_ple2 = PLElayer(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.audio_out, args.audio_out, num_gates=2)
 
         # # PLE for video
         self.v_ple = PLE(args.video_out, args.num_specific_experts, args.num_shared_experts, 
                          args.video_out, args.video_out)
-        # self.v_e1 = Expert(args.video_out, args.video_out, args.video_out)
-        # self.v_e2 = Expert(args.video_out, args.video_out, args.video_out)
-        # self.v_ple1 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.video_out, args.text_out, num_gates=3)
-        # self.v_ple2 = PLElayer(args.video_out, args.num_specific_experts, args.num_shared_experts, 
-        #                        args.video_out, args.text_out, num_gates=2)
-
+        
         # the post_fusion layers 
         # sentiment analysis
         self.post_fusion_dropout = nn.Dropout(p=args.post_fusion_dropout)
@@ -104,20 +86,7 @@ class SELF_MM(nn.Module):
             audio = self.audio_model(audio, audio_lengths)
             video = self.video_model(video, video_lengths)
 
-        # # ple text
-        # text_task1, text_shared, text_task2 = self.t_ple1(text, text, text)
-        # text_task1, text_task2 = self.t_ple2(text_task1, text_shared, text_task2)
-        # # ple audio
-        # audio_task1, audio_shared, audio_task2 = self.a_ple1(audio, audio, audio)
-        # audio_task1, audio_task2 = self.a_ple2(audio_task1, audio_shared, audio_task2)
-        # # ple video
-        # video_task1, video_shared, video_task2 = self.v_ple1(video, video, video)
-        # video_task1, video_task2 = self.v_ple2(video_task1, video_shared, video_task2)
-
-        # text = self.t_e2(self.t_e1(text))
-        # audio = self.a_e2(self.a_e1(audio))
-        # video = self.v_e2(self.v_e1(video)) 
-
+        # ple
         text_task1, text_task2 = self.t_ple(text)
         audio_task1, audio_task2 = self.a_ple(audio)
         video_task1, video_task2 = self.v_ple(video)
@@ -127,6 +96,7 @@ class SELF_MM(nn.Module):
         fusion_h = torch.cat([text_task1, audio_task1, video_task1], dim=-1)
         fusion_h = self.post_fusion_dropout(fusion_h)
         fusion_h = F.relu(self.post_fusion_layer_1(fusion_h), inplace=False)
+
         # # text
         # text_h = self.post_text_dropout(text_task1)
         # text_h = F.relu(self.post_text_layer_1(text_h), inplace=False)
@@ -172,17 +142,12 @@ class SELF_MM(nn.Module):
         #     'Feature_v': video_h,
         #     'Feature_f': fusion_h,
         # }
+
         res = {
             'M': output_fusion, 
             'M_E': e_output_fusion,
-            # 'T': output_text,
-            # 'A': output_audio,
-            # 'V': output_video,
-            # 'Feature_t': text_h,
-            # 'Feature_a': audio_h,
-            # 'Feature_v': video_h,
-            # 'Feature_f': fusion_h,
         }
+        
         return res
 
 class AuViSubNet(nn.Module):

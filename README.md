@@ -1,11 +1,12 @@
 # 数据
 
 数据标注在CSV文件中
+---
 
 使用的是MMSA（https://github.com/thuiar/MMSA）中处理好的特征。
 数据链接：https://pan.baidu.com/s/10mzWQfVUsFhWP5j6oU9AuQ?pwd=1234 
 提取码：1234 
----
+
 处理数据（添加emotion标签）脚本在data_preprocessing文件夹中
 数据链接：https://pan.baidu.com/s/1DIeBQ7xIC1bpbnwyTHwpLA?pwd=1234 
 提取码：1234 
@@ -40,3 +41,13 @@ PLElayer通过控制num_gates参数可以实现两个门控输出或者三个门
 ![alt text](image-3.png)
 加上ple，去掉selfmm的单模损失，还是训不通
 ![alt text](image-4.png)
+
+2024/6/8
+---
+重新修改了代码，包括完善了expert模型，以self—mm模型为基础，去掉self-mm中的单模态的辅助任务。
+
+ple: 任务1 任务2 共享层均1个专家的设置下，同样训不通，corr为nan
+![alt text](image-5.png)
+训练损失设置为1：5，不成功
+
+是不是数据的问题？

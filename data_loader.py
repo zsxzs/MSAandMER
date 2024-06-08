@@ -245,6 +245,17 @@ def MMDataLoader(args, num_workers):
 
 if __name__=='__main__':
     from config import get_config_regression
-    config_file = '/root/autodl-tmp/exp_mmsa/config/config_regression.json'
+    config_file = '/root/autodl-tmp/exp_mmsa/config/config_regression_ple.json'
     args = get_config_regression('self_mm', 'mosei', config_file)
+    args['custom_feature'] = None
+    args['feature_T'] = None
+    args['feature_A'] = None
+    args['feature_V'] = None
     dataset = MMDataset(args, mode='train')
+    data = dataset[0]
+    dataloader = DataLoader(dataset,
+                       batch_size=args['batch_size'],
+                       num_workers=4,
+                       shuffle=True)
+    for i, data in enumerate(dataloader):
+        print(data)
