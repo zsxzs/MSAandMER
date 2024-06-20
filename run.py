@@ -192,7 +192,7 @@ def MMSA_run(
         args = get_config_regression(model_name, dataset_name, config_file)
         args['model_save_path'] = Path(model_save_dir) / f"{args['model_name']}-{args['dataset_name']}.pth"
         args['device'] = assign_gpu(gpu_ids)
-        args['train_mode'] = 'regression' # backward compatibility. TODO: remove all train_mode in code
+        args['train_mode'] = 'classify' # task2 
         args['custom_feature'] = custom_feature
         args['feature_T'] = feature_T
         args['feature_A'] = feature_A
@@ -221,30 +221,55 @@ def MMSA_run(
             result = _run(args, num_workers, is_tune)
             logger.info(f"Result for seed {seed}: {result}")
             model_results.append(result)
-        criterions = list(model_results[0].keys())
+
+        criterions = list(model_results[0]['task1'].keys())
+        # emotions = list(model_results[0]['task2'].keys())
+
         # save result to csv
-        csv_file = res_save_dir / f"{dataset_name}.csv"
-        if csv_file.is_file():
-            df = pd.read_csv(csv_file)
+        csv_msa_file = res_save_dir / f"{dataset_name}_msa.csv"
+        # csv_mer_file = res_save_dir / f"{dataset_name}_mer.csv"
+
+        if csv_msa_file.is_file():
+            msa_df = pd.read_csv(csv_msa_file)
         else:
-            df = pd.DataFrame(columns=["Model"] + criterions)
+            msa_df = pd.DataFrame(columns=["Model"] + criterions)
+
+        # if csv_mer_file.is_file():
+        #     mer_df = pd.read_csv(csv_mer_file)
+        # else:
+        #     mer_df = pd.DataFrame(columns=["Model", "Emotion"] + criterions)
+
         # save results
         res = [model_name]
+
+        # task 1
         for c in criterions:
-            values = [r[c] for r in model_results]
+            values = [r['task1'][c] for r in model_results]
             mean = round(np.mean(values)*100, 2)
             std = round(np.std(values)*100, 2)
             res.append((mean, std))
-        df.loc[len(df)] = res
-        df.to_csv(csv_file, index=None)
-        logger.info(f"Results saved to {csv_file}.")
+        msa_df.loc[len(msa_df)] = res
+        msa_df.to_csv(csv_msa_file, index=None)
+        logger.info(f"Results saved to {csv_msa_file}.")
+
+        # task2
+        # for e in emotions:
+        #     res = [model_name, e]
+        #     for c in criterions:
+        #         values = [r['task2'][e][c] for r in model_results]
+        #         mean = round(np.mean(values)*100, 2)
+        #         std = round(np.std(values)*100, 2)
+        #         res.append((mean, std))
+        #     mer_df.loc[len(mer_df)] = res
+        # mer_df.to_csv(csv_mer_file, index=None)
+        # logger.info(f"Results saved to {csv_mer_file}.")
 
 
 def _run(args, num_workers=4, is_tune=False, from_sena=False):
     # load data and models
     dataloader = MMDataLoader(args, num_workers)
     model = AMIO(args).to(args['device'])
-    # print(model)
+    print(model)
 
     logger.info(f'The model has {count_parameters(model)} trainable parameters')
     # TODO: use multiple gpus

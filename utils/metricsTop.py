@@ -5,20 +5,27 @@ __all__ = ['MetricsTop']
 
 class MetricsTop():
     def __init__(self, train_mode):
-        if train_mode == "regression":
-            self.metrics_dict = {
+        self.metrics_dict = {
                 'MOSI': self.__eval_mosi_regression,
                 'MOSEI': self.__eval_mosei_regression,
                 'SIMS': self.__eval_sims_regression,
                 'SIMSV2': self.__eval_sims_regression
             }
-        else:
-            self.metrics_dict = {
-                'MOSI': self.__eval_mosi_classification,
-                'MOSEI': self.__eval_mosei_classification,
-                'SIMS': self.__eval_sims_classification,
-                'SIMSV2': self.__eval_sims_classification
-            }
+        # senti 全部是回归
+        # if train_mode == "regression":
+        #     self.metrics_dict = {
+        #         'MOSI': self.__eval_mosi_regression,
+        #         'MOSEI': self.__eval_mosei_regression,
+        #         'SIMS': self.__eval_sims_regression,
+        #         'SIMSV2': self.__eval_sims_regression
+        #     }
+        # else:
+        #     self.metrics_dict = {
+        #         'MOSI': self.__eval_mosi_classification,
+        #         'MOSEI': self.__eval_mosei_classification,
+        #         'SIMS': self.__eval_sims_classification,
+        #         'SIMSV2': self.__eval_sims_classification
+        #     }
 
     def __eval_mosi_classification(self, y_pred, y_true):
         """

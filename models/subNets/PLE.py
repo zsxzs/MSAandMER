@@ -20,6 +20,21 @@ class Expert(nn.Module):
         out = self.dnn_layer(x)
         return out
     
+class Expert1(nn.Module):
+    def __init__(self, input_size, output_size, hidden_size, p=0.1):
+        super(Expert1, self).__init__()
+
+        self.dnn_layer = nn.Sequential(
+            nn.Linear(input_size, output_size),
+            nn.ReLU(),
+            nn.Dropout(p)
+        )
+        
+
+    def forward(self, x):
+        out = self.dnn_layer(x)
+        return out
+    
 class PLElayer(nn.Module):
 
     def __init__(self, input_size, num_specific_experts, num_shared_experts, experts_out, experts_hidden, num_gates):
@@ -125,6 +140,23 @@ class PLE(nn.Module):
 
         output_task1, output_shared, output_task2 = self.extraction_layer(x, x, x)
         output_task1, output_task2 = self.cgc(output_task1, output_shared, output_task2)
+
+        return output_task1, output_task2
+    
+class PLE1(nn.Module):
+
+    def __init__(self, input_size, num_specific_experts, num_shared_experts, experts_out, experts_hidden):
+        super(PLE1, self).__init__()
+        # self.extraction_layer = PLElayer(input_size, num_specific_experts, num_shared_experts, 
+        #                                  experts_out, experts_hidden, num_gates=3)
+        self.cgc = PLElayer(input_size, num_specific_experts, num_shared_experts, 
+                            experts_out, experts_hidden, num_gates=2)
+        
+    
+    def forward(self, x):
+
+        # output_task1, output_shared, output_task2 = self.extraction_layer(x, x, x)
+        output_task1, output_task2 = self.cgc(x, x, x)
 
         return output_task1, output_task2
 

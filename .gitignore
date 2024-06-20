@@ -11,7 +11,7 @@ experiment.py
 benchmark
 result
 results
-# outputs/*
+outputs/*
 # outputs
 *.pth
 # datasets/*

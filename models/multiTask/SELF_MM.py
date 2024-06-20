@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from ..subNets import BertTextEncoder
-from ..subNets import Expert, PLElayer, PLE
+from ..subNets import Expert, PLElayer, PLE, PLE1
 
 __all__ = ['SELF_MM']
 
@@ -29,15 +29,15 @@ class SELF_MM(nn.Module):
                             num_layers=args.v_lstm_layers, dropout=args.v_lstm_dropout)
 
         # PLE for text
-        self.t_ple = PLE(args.text_out, args.num_specific_experts, args.num_shared_experts, 
+        self.t_ple = PLE1(args.text_out, args.num_specific_experts, args.num_shared_experts, 
                          args.text_out, args.text_out)
 
         # # PLE for audio
-        self.a_ple = PLE(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
+        self.a_ple = PLE1(args.audio_out, args.num_specific_experts, args.num_shared_experts, 
                          args.audio_out, args.audio_out)
 
         # # PLE for video
-        self.v_ple = PLE(args.video_out, args.num_specific_experts, args.num_shared_experts, 
+        self.v_ple = PLE1(args.video_out, args.num_specific_experts, args.num_shared_experts, 
                          args.video_out, args.video_out)
         
         # the post_fusion layers 
@@ -51,7 +51,7 @@ class SELF_MM(nn.Module):
         self.e_post_fusion_dropout = nn.Dropout(p=args.post_fusion_dropout)
         self.e_post_fusion_layer_1 = nn.Linear(args.text_out + args.video_out + args.audio_out, args.post_fusion_dim)
         self.e_post_fusion_layer_2 = nn.Linear(args.post_fusion_dim, args.post_fusion_dim)
-        self.e_post_fusion_layer_3 = nn.Linear(args.post_fusion_dim, 6)
+        self.e_post_fusion_layer_3 = nn.Linear(args.post_fusion_dim, 6 * 4) # [0, 1, 2, 3]
 
         # the classify layer for text
         # self.post_text_dropout = nn.Dropout(p=args.post_text_dropout)
@@ -90,6 +90,10 @@ class SELF_MM(nn.Module):
         text_task1, text_task2 = self.t_ple(text)
         audio_task1, audio_task2 = self.a_ple(audio)
         video_task1, video_task2 = self.v_ple(video)
+
+        # text_task1, text_task2 = text, text
+        # audio_task1, audio_task2 = audio, audio
+        # video_task1, video_task2 = video, video
         
         # =====================task1=====================
         # fusion

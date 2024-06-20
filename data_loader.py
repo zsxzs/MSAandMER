@@ -9,6 +9,13 @@ __all__ = ['MMDataLoader']
 
 logger = logging.getLogger('MMSA')
 
+def mapping(tensor):
+    tensor[tensor <= 1e-6] = 0
+    tensor[(tensor > 1e-6) & (tensor - 1.0 <= 1e-6)] = 1
+    tensor[(tensor - 1.0 > 1e-6) & (tensor -2.0 <= 1e-6)] = 2
+    tensor[tensor - 2.0 > 1e-6] = 3
+    return tensor
+
 class MMDataset(Dataset):
     def __init__(self, args, mode='train'):
         self.mode = mode
@@ -220,6 +227,10 @@ class MMDataset(Dataset):
             sample['vision_mask'] = self.vision_mask[index]
             sample['vision_missing_mask'] = torch.Tensor(self.vision_missing_mask[index])
 
+        if self.args['train_mode'] == 'classify':
+            # print(sample['labels']['M_E'])
+            sample['labels']['M_E'] = mapping(sample['labels']['M_E'].clone()).long()
+
         return sample
 
 def MMDataLoader(args, num_workers):
@@ -248,14 +259,19 @@ if __name__=='__main__':
     config_file = '/root/autodl-tmp/exp_mmsa/config/config_regression_ple.json'
     args = get_config_regression('self_mm', 'mosei', config_file)
     args['custom_feature'] = None
+    args['train_mode'] = 'classify'
     args['feature_T'] = None
     args['feature_A'] = None
     args['feature_V'] = None
     dataset = MMDataset(args, mode='train')
-    data = dataset[0]
-    dataloader = DataLoader(dataset,
-                       batch_size=args['batch_size'],
-                       num_workers=4,
-                       shuffle=True)
-    for i, data in enumerate(dataloader):
-        print(data)
+    # data = dataset[0]
+
+    for i in range(len(dataset)):
+        print(dataset[i]['labels']['M_E'])
+
+    # dataloader = DataLoader(dataset,
+    #                    batch_size=args['batch_size'],
+    #                    num_workers=4,
+    #                    shuffle=True)
+    # for i, data in enumerate(dataloader):
+    #     print(data)

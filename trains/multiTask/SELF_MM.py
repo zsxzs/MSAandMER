@@ -16,13 +16,16 @@ emotions = ['happiness', 'sadness', 'anger', 'surprise', 'disgust', 'fear']
 
 class SELF_MM():
     def __init__(self, args):
-        assert args.train_mode == 'regression'
+        assert args.train_mode == 'regression' or args.train_mode == 'classify'
 
         self.args = args
         # self.args.tasks = "MTAV"
         self.args.tasks = "M"
 
         self.metrics = MetricsTop(args.train_mode).getMetics(args.dataset_name)
+
+        self.criterion1 = nn.L1Loss()
+        self.criterion2 = nn.CrossEntropyLoss()
 
         # self.feature_map = {
         #     'fusion': torch.zeros(args.train_samples, args.post_fusion_dim, requires_grad=False).to(args.device),
@@ -73,7 +76,6 @@ class SELF_MM():
         # }
         # # 'M_E': 'fusion_emotion',
 
-        # # self.criterion = nn.L1Loss()
 
     def do_train(self, model, dataloader, return_epoch_results=False):
         bert_no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
@@ -143,6 +145,7 @@ class SELF_MM():
                     text = batch_data['text'].to(self.args.device)
                     # indexes = batch_data['index'].view(-1)
                     cur_id = batch_data['id']
+                    batch_size = len(cur_id)
                     labels_m = batch_data['labels']['M'].to(self.args.device)
                     labels_em = batch_data['labels']['M_E'].to(self.args.device)
                     ids.extend(cur_id)
@@ -156,11 +159,11 @@ class SELF_MM():
                     # forward
                     outputs = model(text, (audio, audio_lengths), (vision, vision_lengths))
                     # store results
-                    y_pred['M'].append(outputs['M'].detach().cpu())
+                    y_pred['M'].append(outputs['M'].cpu())
                     y_true['M'].append(labels_m.cpu())
 
-                    y_pred['M_E'].append(outputs['M_E'].detach().cpu())
-                    y_true['M_E'].append(labels_em.cpu())
+                    # y_pred['M_E'].append(outputs['M_E'].cpu())
+                    # y_true['M_E'].append(labels_em.cpu())
 
                     # for m in self.args.tasks:
                     #     y_pred[m].append(outputs[m].cpu())
@@ -178,10 +181,16 @@ class SELF_MM():
                     # # add emotion loss
                     # # loss += self.weighted_loss(outputs['M_E'], self.label_map[self.name_map['M_E']][indexes], 
                     # #                            indexes=indexes, mode='fusion')
-                    msa_loss = F.l1_loss(outputs['M'], labels_m)
+                    msa_loss = self.criterion1(outputs['M'], labels_m)
                     loss += msa_loss
-                    mer_loss = F.l1_loss(outputs['M_E'], labels_em)
-                    loss += mer_loss * 5
+
+                    outputs['M_E'] = outputs['M_E'].view(batch_size * 6, 4)
+                    labels_em = labels_em.view(-1)
+                    mer_loss = self.criterion2(outputs['M_E'], labels_em) # * 6
+
+                    # mer_loss = F.l1_loss(outputs['M_E'], labels_em)
+                    # loss += mer_loss * 5
+                    loss += mer_loss
 
                     # backward
                     loss.backward()
@@ -217,19 +226,25 @@ class SELF_MM():
             #     train_results = self.metrics(pred, true)
             #     logger.info('%s: >> ' %(m) + dict_to_str(train_results))
 
+            train_results = dict()
             # task1
             pred, true = torch.cat(y_pred['M']), torch.cat(y_true['M'])
-            train_results = self.metrics(pred, true)
-            logger.info('%s: >> ' %('MSA (M)') + dict_to_str(train_results))
+            train_results['task1'] = self.metrics(pred, true)
+            logger.info('%s: >> ' %('MSA (M)') + dict_to_str(train_results['task1']))
 
-            pred, true = torch.cat(y_pred['M_E']), torch.cat(y_true['M_E'])
-            for i, emotion in enumerate(emotions):
-                train_results = self.metrics(pred[:, i], true[:, i])
-                logger.info('%s: >> ' %('MER (' + emotion + ')') + dict_to_str(train_results))
+            # task2
+            # pred, true = torch.cat(y_pred['M_E']), torch.cat(y_true['M_E'])
+            # train_results['task2'] = {}
+            # for i, emotion in enumerate(emotions):
+            #     train_results['task2'][emotion] = self.metrics(pred[:, i], true[:, i])
+            #     logger.info('%s: >> ' %('MER (' + emotion + ')') + dict_to_str(train_results['task2'][emotion]))
 
             # validation
-            val_results = self.do_test(model, dataloader['valid'], mode="VAL")
-            cur_valid = val_results[self.args.KeyEval]
+            val_results = self.do_test(model, dataloader['valid'], mode='valid')
+            # cur_valid = val_results[self.args.KeyEval]
+            cur_valid = val_results['MSA Loss']
+
+
             # save best model
             isBetter = cur_valid <= (best_valid - 1e-6) if min_or_max == 'min' else cur_valid >= (best_valid + 1e-6)
             if isBetter:
@@ -237,18 +252,21 @@ class SELF_MM():
                 # save model
                 torch.save(model.cpu().state_dict(), self.args.model_save_path)
                 model.to(self.args.device)
+
             # save labels
             if self.args.save_labels:
                 tmp_save = {k: v.cpu().numpy() for k, v in self.label_map.items()}
                 tmp_save['ids'] = ids
                 saved_labels[epochs] = tmp_save
+
             # epoch results
             if return_epoch_results:
                 train_results["Loss"] = train_loss
                 epoch_results['train'].append(train_results)
                 epoch_results['valid'].append(val_results)
-                test_results = self.do_test(model, dataloader['test'], mode="TEST")
+                test_results = self.do_test(model, dataloader['test'], mode='test')
                 epoch_results['test'].append(test_results)
+                
             # early stop
             if epochs - best_epoch >= self.args.early_stop:
                 if self.args.save_labels:
@@ -256,11 +274,17 @@ class SELF_MM():
                         plk.dump(saved_labels, df, protocol=4)
                 return epoch_results if return_epoch_results else None
 
-    def do_test(self, model, dataloader, mode="VAL", return_sample_results=False):
+    def do_test(self, model, dataloader, mode='test', return_sample_results=False):
         model.eval()
-        y_pred = {'M': [], 'T': [], 'A': [], 'V': []}
-        y_true = {'M': [], 'T': [], 'A': [], 'V': []}
+        # y_pred = {'M': [], 'T': [], 'A': [], 'V': []}
+        # y_true = {'M': [], 'T': [], 'A': [], 'V': []}
+        y_pred = {'M': [], 'M_E': []}
+        y_true = {'M': [], 'M_E': []}
+
         eval_loss = 0.0
+        eval_msa_loss = 0.0
+        eval_mer_loss = 0.0
+
         if return_sample_results:
             ids, sample_results = [], []
             all_labels = []
@@ -283,7 +307,9 @@ class SELF_MM():
                     else:
                         audio_lengths, vision_lengths = 0, 0
 
-                    labels_m = batch_data['labels']['M'].to(self.args.device).view(-1)
+                    labels_m = batch_data['labels']['M'].to(self.args.device)
+                    labels_em = batch_data['labels']['M_E'].to(self.args.device)
+                    batch_size = labels_m.size()[0]
                     outputs = model(text, (audio, audio_lengths), (vision, vision_lengths))
 
                     if return_sample_results:
@@ -295,16 +321,51 @@ class SELF_MM():
                         # test_preds_i = np.argmax(preds, axis=1)
                         sample_results.extend(preds.squeeze())
                     
-                    loss = self.weighted_loss(outputs['M'], labels_m)
+                    # loss = self.weighted_loss(outputs['M'], labels_m)
+                    loss = 0.0
+                    msa_loss = F.l1_loss(outputs['M'], labels_m)
+                    loss += msa_loss
+
+                    outputs['M_E'] = outputs['M_E'].view(batch_size * 6, 4)
+                    labels_em = labels_em.view(-1)
+                    mer_loss = self.criterion2(outputs['M_E'], labels_em) # * 6
+                    # mer_loss = F.l1_loss(outputs['M_E'], labels_em)
+                    # loss += mer_loss * 5
+                    loss += mer_loss
+
                     eval_loss += loss.item()
+                    eval_msa_loss += msa_loss.item()
+                    eval_mer_loss += mer_loss.item()
+
                     y_pred['M'].append(outputs['M'].cpu())
                     y_true['M'].append(labels_m.cpu())
+                    y_pred['M_E'].append(outputs['M_E'].cpu())
+                    y_true['M_E'].append(labels_em.cpu())
+
         eval_loss = eval_loss / len(dataloader)
-        logger.info(mode+"-(%s)" % self.args.model_name + " >> loss: %.4f " % eval_loss)
-        pred, true = torch.cat(y_pred['M']), torch.cat(y_true['M'])
-        eval_results = self.metrics(pred, true)
-        logger.info('M: >> ' + dict_to_str(eval_results))
+        eval_msa_loss = eval_msa_loss / len(dataloader)
+        eval_mer_loss = eval_mer_loss / len(dataloader)
+
+        logger.info(mode + "(%s)" % self.args.model_name + " >> sum loss: %.4f " % eval_loss + \
+                    " >> msa loss: %.4f " % eval_msa_loss + " >> mer loss: %.4f " % eval_mer_loss)
+        
+        eval_results = dict()
         eval_results['Loss'] = round(eval_loss, 4)
+        eval_results['MSA Loss'] = round(eval_msa_loss, 4)
+        eval_results['MER Loss'] = round(eval_mer_loss, 4)
+
+
+        # task1
+        pred, true = torch.cat(y_pred['M']), torch.cat(y_true['M'])
+        eval_results['task1'] = self.metrics(pred, true)
+        logger.info('%s: >> ' %('MSA (M)') + dict_to_str(eval_results['task1']))
+
+        # task2
+        # pred, true = torch.cat(y_pred['M_E']), torch.cat(y_true['M_E'])
+        # eval_results['task2'] = {}
+        # for i, emotion in enumerate(emotions):
+        #     eval_results['task2'][emotion] = self.metrics(pred[:, i], true[:, i])
+        #     logger.info('%s: >> ' %('MER (' + emotion + ')') + dict_to_str(eval_results['task2'][emotion]))
 
         if return_sample_results:
             eval_results["Ids"] = ids
