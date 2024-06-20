@@ -57,10 +57,13 @@ ple: 任务1 任务2 共享层均1个专家的设置下，同样训不通，corr
 1、在self-mm代码中每个模态特征提取之后，添加了ple模块 （位于/models/multiTask/SELF_MM.py）
 ![alt text](image-6.png)
 ![alt text](image-7.png)
+
 2、ple的实现过程展示在/models/subNets/PLE.py中，其中包括了每个专家的模型结构
 ![alt text](image-8.png)
+
 以及两种ple的实现，一种是有3个gate的网络结构，一种是只包含cgc的结构。
 ![alt text](image-9.png)
+
 3、情绪识别任务的设置情况，我设置了一个四分类的分类任务，在data_loader里做了以下映射
 ```
 # 我统计了一下标签情况
